@@ -1,0 +1,63 @@
+Input table: emp
+empid mgrid deptid sal
+001	002	5	500
+003	005	5	500
+002	005	5	200
+005	NULL	5	600
+008	010	4	150
+009	010	4	500
+010	NULL	4	500
+
+Input table: dept
+
+deptid deptname 
+5 SALES
+4 FINANCE
+
+-- Create table CUSTOMER 
+drop table if exists problem1_dept;
+
+create table problem1_dept(
+dept_id int,
+dept_name string)
+row format delimited
+fields terminated by '\t'
+lines terminated by '\n'
+stored as textfile; 
+
+load data local inpath '/users/s061332/hive_input1.txt' into table problem1_dept;
+
+-- Create emp table
+drop table if exists problem1_emp;
+
+create table problem1_emp(
+emp_id int,
+mgr_id int,
+dept_id int,
+emp_sal int)
+row format delimited
+fields terminated by '\t'
+lines terminated by '\n'
+stored as textfile; 
+
+load data local inpath '/users/s061332/hive_input2.txt' into table problem1_emp;
+
+-- Find employee who dont not manage anyone
+
+select a.* from problem1_emp a left outer join (select mgr_id from problem1_emp) b on a.emp_id=b.mgr_id where b.mgr_id is NULL;
+
+-- Find department with max number of employee (solution should consider with more than 1 dept) Results should have department name, count of employee, sorted by department name.
+
+select a.dept_id, b.dept_name, count(a.emp_id) from problem1_emp a join problem1_dept b on a.dept_id = b.dept_id group by a.dept_id, b.dept_name;
+
+-- Find top 3 employee salary based in every department. Results should have dept name emp id salary sorted by department name and then employee with high to low salary.
+
+select b.dept_name, a.emp_id, a.emp_sal from problem1_emp a join problem1_dept b where a.dept_id=b.dept_id group by b.dept_name, a.emp_sal, a.emp_id; 
+
+select x. * from (select b.dept_name, a.emp_id, a.emp_sal, dense_rank() over (partition by b.dept_name order by a.emp_sal desc) rnk from problem1_emp a join problem1_dept b where a.dept_id=b.dept_id ) X where x.rnk <=3 order by dept_name, emp_sal desc; 
+
+select x. * from (select b.dept_name, a.emp_id, a.emp_sal, dense_rank() over (order by a.emp_sal desc) rnk from problem1_emp a join problem1_dept b where a.dept_id=b.dept_id ) X where x.rnk =1 order by dept_name, emp_sal desc;
+
+-- List all employess, their salary and the salary of the person in their department who makes the most money, but less than the employee. 
+
+select a.emp_id, a.emp_sal, a.dept_id, max(a.emp_sal) over (partition by a.dept_id order by a.emp_sal desc range between 1 following and unbounded following) xyz from problem1_emp a order by dept_id, emp_sal desc;
